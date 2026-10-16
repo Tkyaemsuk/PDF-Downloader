@@ -1,0 +1,68 @@
+name: Publish plugin release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (for example v1.0.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+          persist-credentials: false
+      - name: Validate release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, re, tarfile
+          tag = os.environ['RELEASE_TAG']
+          if not re.fullmatch(r'v\d+\.\d+\.\d+', tag):
+              raise SystemExit('Expected a vMAJOR.MINOR.PATCH tag')
+          pkg = json.loads(pathlib.Path('package.json').read_text())
+          assert tag == 'v' + pkg['version'], 'Tag/package version mismatch'
+          archive = pathlib.Path('releases') / f"pdf-downloader-{pkg['version']}.tar.gz"
+          with tarfile.open(archive) as tar:
+              assert set(tar.getnames()) == {'plugin.min.js', 'schema.json', 'package.json'}
+              schema = json.load(tar.extractfile('schema.json'))
+              packaged = json.load(tar.extractfile('package.json'))
+              assert packaged['version'] == pkg['version'] == schema['version']
+              assert packaged['name'] == schema['schema']['name'] == pkg['name']
+              assert hashlib.sha1(tar.extractfile('plugin.min.js').read()).hexdigest() == schema['hash']
+          notes = pathlib.Path('docs/releases') / f'{tag}.md'
+          assert notes.is_file(), 'Missing release notes'
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          pathlib.Path('releases/SHA256SUMS').write_text(f'{digest}  {archive.name}\n')
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write(f'RELEASE_ARCHIVE={archive}\n')
+          PY
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" "$RELEASE_ARCHIVE" releases/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "PDF Downloader $RELEASE_TAG" \
+            --notes-file "docs/releases/$RELEASE_TAG.md" \
+            --latest
