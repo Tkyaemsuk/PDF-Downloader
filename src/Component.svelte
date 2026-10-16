@@ -10,6 +10,10 @@
   export let paginationMode = 'auto'
   export let margin = 12
   export let quality = 2
+  export let fitLogo = true
+  export let logoSelector = ''
+  export let logoMaxWidth = 28
+  export let logoMaxHeight = 20
   export let startDateLabel = 'วันที่เริ่มใช้งาน'
   export let startDate = ''
   export let documentCodeLabel = 'รหัสเอกสาร'
@@ -37,7 +41,7 @@
         if (matches.length !== 1) throw new Error('CSS selector ต้องตรงกับส่วนเอกสารเพียงหนึ่งรายการ')
         target = matches[0]
       }
-      const count = await downloadPdf(target, { fileName, paperSize, orientation, paginationMode, margin, quality, startDateLabel, startDate, documentCodeLabel, documentCode, showPageNumbers, footerFontSize, watermarkText, watermarkImage, watermarkOpacity, watermarkAngle }, value => status = value)
+      const count = await downloadPdf(target, { fileName, paperSize, orientation, paginationMode, margin, quality, fitLogo, logoSelector, logoMaxWidth, logoMaxHeight, startDateLabel, startDate, documentCodeLabel, documentCode, showPageNumbers, footerFontSize, watermarkText, watermarkImage, watermarkOpacity, watermarkAngle }, value => status = value)
       status = `ดาวน์โหลด PDF สำเร็จ ${count} หน้า`
     } catch (e) {
       error = e.message || 'สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่'

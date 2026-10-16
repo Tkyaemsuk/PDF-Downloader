@@ -1,3 +1,4 @@
+import { fitHeaderLogo } from './logo.js'
 import html2canvas from 'html2canvas'
 import { PDFDocument } from 'pdf-lib'
 import { geometry, number, planPages, filename } from './layout.js'
@@ -78,6 +79,7 @@ export async function createPdf(target, options = {}, progress = () => {}) {
       clone.style.setProperty('width', `${Math.max(clone.getBoundingClientRect().width, clone.scrollWidth)}px`, 'important')
       clone.style.setProperty('max-width', 'none', 'important')
       await doc.fonts.ready
+      fitHeaderLogo(clone, options, g)
       const rect = clone.getBoundingClientRect()
       if (!rect.width || !rect.height) throw new Error('ส่วนเอกสารถูกซ่อนหรือไม่มีขนาด')
       if (rect.width * quality > 16000 || rect.height * quality > 16000 || rect.width * rect.height * quality * quality > 32000000) {

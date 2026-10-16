@@ -135,3 +135,47 @@ test('near-page signature area fits on one page and footer stays outside content
   const pdf=await PDFDocument.load(await readFile(await (await download).path()))
   expect(pdf.getPageCount()).toBe(1)
 })
+
+test('header logo retains intrinsic ratio in PDF without changing source or body images', async ({ page }) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const c=document.createElement('canvas');c.width=100;c.height=100
+    const ctx=c.getContext('2d');ctx.fillStyle='rgb(255,0,255)';ctx.fillRect(0,0,100,100)
+    const root=document.createElement('div');root.style.cssText='width:800px;height:900px;background:white'
+    root.innerHTML=`<header style="display:flex;align-items:center"><img id="logo" src="${c.toDataURL()}" style="width:140px;height:60px"><h2>Company report</h2></header><div style="height:450px"></div><img id="body-image" src="${c.toDataURL()}" style="width:140px;height:60px">`
+    document.body.append(root)
+    await Promise.all(Array.from(root.querySelectorAll('img')).map(img=>img.decode()))
+    const before=root.innerHTML
+    const original=HTMLCanvasElement.prototype.toDataURL
+    let box
+    HTMLCanvasElement.prototype.toDataURL=function(...args){
+      if(args[0]==='image/png' && this.height>1000){
+        const p=this.getContext('2d').getImageData(0,0,this.width,Math.floor(this.height/3)).data
+        let left=this.width,right=-1,top=this.height,bottom=-1
+        for(let y=0;y<this.height/3-1;y++)for(let x=0;x<this.width;x++){
+          const i=(y*this.width+x)*4
+          if(p[i]>240&&p[i+1]<20&&p[i+2]>240){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}
+        }
+        box={width:right-left+1,height:bottom-top+1}
+      }
+      return original.apply(this,args)
+    }
+    try{
+      await window.createPdf(root,{quality:1})
+      const automatic=box
+      await window.createPdf(root,{quality:1,logoSelector:'#logo',logoMaxWidth:8})
+      const smaller=box
+      await window.createPdf(root,{quality:1,fitLogo:false})
+      const disabled=box
+      let error=''
+      try{await window.createPdf(root,{logoSelector:'#missing'})}catch(e){error=e.message}
+      return {automatic,smaller,disabled,unchanged:before===root.innerHTML,error}
+    }finally{HTMLCanvasElement.prototype.toDataURL=original;root.remove()}
+  })
+  expect(result.automatic.width).toBeGreaterThan(20)
+  expect(Math.abs(result.automatic.width-result.automatic.height)).toBeLessThanOrEqual(1)
+  expect(result.smaller.width).toBeLessThan(result.automatic.width)
+  expect(result.disabled.width/result.disabled.height).toBeGreaterThan(2)
+  expect(result.unchanged).toBe(true)
+  expect(result.error).toContain('หนึ่งรายการ')
+})

@@ -93,6 +93,30 @@
         "defaultValue": 2
       },
       {
+        "type": "boolean",
+        "key": "fitLogo",
+        "label": "ปรับสัดส่วนโลโก้ส่วนหัว",
+        "defaultValue": true
+      },
+      {
+        "type": "text",
+        "key": "logoSelector",
+        "label": "CSS selector โลโก้ (ว่าง = รูปแรกส่วนหัว)",
+        "defaultValue": ""
+      },
+      {
+        "type": "number",
+        "key": "logoMaxWidth",
+        "label": "ความกว้างสูงสุดโลโก้ (มม. 8–60)",
+        "defaultValue": 28
+      },
+      {
+        "type": "number",
+        "key": "logoMaxHeight",
+        "label": "ความสูงสูงสุดโลโก้ (มม. 8–40)",
+        "defaultValue": 20
+      },
+      {
         "type": "text",
         "key": "startDateLabel",
         "label": "ข้อความท้ายซ้าย",
