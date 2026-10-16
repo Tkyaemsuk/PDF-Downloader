@@ -179,3 +179,57 @@ test('header logo retains intrinsic ratio in PDF without changing source or body
   expect(result.unchanged).toBe(true)
   expect(result.error).toContain('หนึ่งรายการ')
 })
+
+test('two logical forms keep both logos and signatures on their own PDF pages', async ({ page }) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const logo=document.createElement('canvas');logo.width=100;logo.height=100
+    const logoCtx=logo.getContext('2d');logoCtx.fillStyle='rgb(255,0,255)';logoCtx.fillRect(0,0,100,100)
+    const root=document.createElement('div');root.style.cssText='width:800px;display:flex;flex-direction:column;gap:64px;background:rgb(255,0,0)'
+    root.innerHTML=[1100,1300].map((height,i)=>`<section class="pdf-page" style="height:${height}px;position:relative;background:white;flex-shrink:0"><header class="pdf-header" style="display:flex;align-items:center;height:90px"><img class="pdf-logo" src="${logo.toDataURL()}" style="width:140px;height:60px"><h2>Form ${i+1}</h2></header><div style="padding:20px">Independent report body</div><div class="pdf-signatures" style="position:absolute;bottom:0;height:90px;width:100%;background:rgb(0,255,0)">Supervisor / Signature ${i+1}</div></section>`).join('')
+    document.body.append(root)
+    await Promise.all([...root.querySelectorAll('img')].map(img=>img.decode()))
+    const before=root.innerHTML
+    const original=HTMLCanvasElement.prototype.toDataURL
+    let captured=[]
+    HTMLCanvasElement.prototype.toDataURL=function(...args){
+      if(args[0]==='image/png'&&this.height>1000){
+        const data=this.getContext('2d').getImageData(0,0,this.width,this.height).data
+        const logo={left:this.width,right:-1,top:this.height,bottom:-1};let signature=0,signatureBottom=-1,gap=0
+        for(let y=0;y<this.height;y++)for(let x=0;x<this.width;x++){
+          const i=(y*this.width+x)*4,r=data[i],g=data[i+1],b=data[i+2]
+          if(r>240&&g<20&&b>240){logo.left=Math.min(logo.left,x);logo.right=Math.max(logo.right,x);logo.top=Math.min(logo.top,y);logo.bottom=Math.max(logo.bottom,y)}
+          if(r<20&&g>240&&b<20){signature++;signatureBottom=y}
+          if(r>240&&g<20&&b<20)gap++
+        }
+        captured.push({logoWidth:logo.right-logo.left+1,logoHeight:logo.bottom-logo.top+1,logoTop:logo.top,signature,signatureBottom,gap,height:this.height})
+      }
+      return original.apply(this,args)
+    }
+    try{
+      const auto=await window.createPdf(root,{quality:1})
+      const images=captured
+      captured=[]
+      const forms=await window.createPdf(root,{quality:1,paginationMode:'forms'})
+      let missing=''
+      try {await window.createPdf(root,{quality:1,paginationMode:'forms',pageSelector:'.missing'})}catch(e){missing=e.message}
+      // Explicit page semantics must work on Budibase display:contents wrappers too.
+      root.querySelectorAll('.pdf-page').forEach(el=>{el.className='';const wrapper=document.createElement('div');wrapper.className='pdf-page';wrapper.style.display='contents';el.replaceWith(wrapper);wrapper.append(el)})
+      const wrappers=await window.createPdf(root,{quality:1,paginationMode:'forms'})
+      return {count:auto.pageCount,forms:forms.pageCount,wrappers:wrappers.pageCount,images,missing,before}
+    } finally { HTMLCanvasElement.prototype.toDataURL=original;root.remove() }
+  })
+  expect(result.count).toBe(2)
+  expect(result.forms).toBe(2)
+  expect(result.wrappers).toBe(2)
+  expect(result.images).toHaveLength(2)
+  for(const image of result.images){
+    expect(image.logoWidth).toBeGreaterThan(20)
+    expect(Math.abs(image.logoWidth-image.logoHeight)).toBeLessThanOrEqual(1)
+    expect(image.logoTop).toBeLessThan(100)
+    expect(image.signature).toBeGreaterThan(1000)
+    expect(image.signatureBottom).toBeLessThan(image.height*270/297)
+    expect(image.gap).toBe(0)
+  }
+  expect(result.missing).toContain('ไม่พบหน้าแบบฟอร์ม')
+})

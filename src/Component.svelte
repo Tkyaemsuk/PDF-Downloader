@@ -8,6 +8,7 @@
   export let paperSize = 'A4'
   export let orientation = 'portrait'
   export let paginationMode = 'auto'
+  export let pageSelector = '.pdf-page'
   export let margin = 12
   export let quality = 2
   export let fitLogo = true
@@ -41,7 +42,7 @@
         if (matches.length !== 1) throw new Error('CSS selector ต้องตรงกับส่วนเอกสารเพียงหนึ่งรายการ')
         target = matches[0]
       }
-      const count = await downloadPdf(target, { fileName, paperSize, orientation, paginationMode, margin, quality, fitLogo, logoSelector, logoMaxWidth, logoMaxHeight, startDateLabel, startDate, documentCodeLabel, documentCode, showPageNumbers, footerFontSize, watermarkText, watermarkImage, watermarkOpacity, watermarkAngle }, value => status = value)
+      const count = await downloadPdf(target, { fileName, paperSize, orientation, paginationMode, pageSelector, margin, quality, fitLogo, logoSelector, logoMaxWidth, logoMaxHeight, startDateLabel, startDate, documentCodeLabel, documentCode, showPageNumbers, footerFontSize, watermarkText, watermarkImage, watermarkOpacity, watermarkAngle }, value => status = value)
       status = `ดาวน์โหลด PDF สำเร็จ ${count} หน้า`
     } catch (e) {
       error = e.message || 'สร้าง PDF ไม่สำเร็จ กรุณาลองใหม่'
@@ -59,7 +60,7 @@
     <span class="status" role="status" aria-live="polite">{status}</span>
     {#if error}<span class="error" role="alert">{error}</span>{/if}
   </div>
-  <div class="document" bind:this={content}><slot /></div>
+  <div class="document pdf-document" bind:this={content}><slot /></div>
 </div>
 
 <style>

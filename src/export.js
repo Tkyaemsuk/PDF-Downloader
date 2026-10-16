@@ -1,3 +1,4 @@
+import { findFormPages, formRegions } from './pages.js'
 import { fitHeaderLogo } from './logo.js'
 import html2canvas from 'html2canvas'
 import { PDFDocument } from 'pdf-lib'
@@ -52,7 +53,7 @@ export async function createPdf(target, options = {}, progress = () => {}) {
   }))
   const g = geometry(options)
   const watermark = options.watermarkImage ? await loadImage(options.watermarkImage) : null
-  let blocks = [], forced = []
+  let blocks = [], forced = [], regions = []
   const quality = number(options.quality, 2, 1, 3)
   progress('กำลังจัดหน้าเอกสาร…')
   let cloneFrame
@@ -79,18 +80,21 @@ export async function createPdf(target, options = {}, progress = () => {}) {
       clone.style.setProperty('width', `${Math.max(clone.getBoundingClientRect().width, clone.scrollWidth)}px`, 'important')
       clone.style.setProperty('max-width', 'none', 'important')
       await doc.fonts.ready
-      fitHeaderLogo(clone, options, g)
+      const forms = findFormPages(clone, options)
+      // Each logical form gets the same logo treatment, not just the first image.
+      for (const scope of forms.length ? forms : [clone]) fitHeaderLogo(scope, options, g)
+      regions = formRegions(clone, forms, quality)
       const rect = clone.getBoundingClientRect()
       if (!rect.width || !rect.height) throw new Error('ส่วนเอกสารถูกซ่อนหรือไม่มีขนาด')
       if (rect.width * quality > 16000 || rect.height * quality > 16000 || rect.width * rect.height * quality * quality > 32000000) {
         throw new Error('เอกสารมีขนาดใหญ่เกินไป กรุณาลดความละเอียดหรือแบ่งข้อมูลเป็นชุดเล็กลง')
       }
-      const candidates = clone.querySelectorAll('tr,p,h1,h2,h3,h4,h5,h6,img,svg,canvas,[data-pdf-keep]')
+      const candidates = clone.querySelectorAll('tr,p,h1,h2,h3,h4,h5,h6,img,svg,canvas,[data-pdf-keep],.pdf-header,.pdf-signatures,.pdf-keep')
       blocks = Array.from(candidates).map(el => {
         const r = el.getBoundingClientRect()
         return { top: Math.floor((r.top - rect.top) * quality), bottom: Math.ceil((r.bottom - rect.top) * quality) }
       })
-      forced = Array.from(clone.querySelectorAll('[data-pdf-break-before]')).map(el => Math.floor((el.getBoundingClientRect().top - rect.top) * quality))
+      forced = Array.from(clone.querySelectorAll('[data-pdf-break-before],.pdf-break-before')).map(el => Math.floor((el.getBoundingClientRect().top - rect.top) * quality))
       // html2canvas skips inaccessible cross-origin images. Detect this instead of losing them silently.
       for (const img of clone.querySelectorAll('img')) {
         const source = img.currentSrc || img.src
@@ -98,8 +102,11 @@ export async function createPdf(target, options = {}, progress = () => {}) {
       }
     }
   }).catch(error => { cloneFrame?.remove(); throw error })
-  const layout = planPages(capture.width, capture.height, g, options.paginationMode, blocks, forced)
-  const { pages } = layout
+  const layout = regions.length ? null : planPages(capture.width, capture.height, g, options.paginationMode, blocks, forced)
+  const pages = regions.length ? regions.map(region => {
+    const fitted = planPages(region.width, region.height, g, 'single')
+    return { ...region, scale: fitted.scale, x: fitted.x }
+  }) : layout.pages.map(slice => ({ ...slice, left: 0, width: capture.width, scale: layout.scale, x: layout.x }))
   const pdf = await PDFDocument.create()
   pdf.setTitle(String(options.fileName || 'document'))
   pdf.setCreator('PDF Downloader — Budibase 3.4.1 / Svelte 3')
@@ -113,7 +120,7 @@ export async function createPdf(target, options = {}, progress = () => {}) {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
     const slice = pages[i]
-    ctx.drawImage(capture, 0, slice.start, capture.width, slice.height, layout.x * pxPerMm, m, capture.width * layout.scale * pxPerMm, slice.height * layout.scale * pxPerMm)
+    ctx.drawImage(capture, slice.left, slice.start, slice.width, slice.height, slice.x * pxPerMm, m, slice.width * slice.scale * pxPerMm, slice.height * slice.scale * pxPerMm)
     // Low-opacity watermark over the captured background remains visible on opaque Budibase cards.
     // It is restricted to the document body and never covers the footer.
     if (options.watermarkText || watermark) {

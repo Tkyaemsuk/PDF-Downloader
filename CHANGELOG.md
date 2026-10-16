@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4) — 2026-10-16
+
+- เพิ่มโหมดแบบฟอร์มแยกหน้าและ selector `.pdf-page`: จัดแต่ละชุดลงหนึ่งกระดาษ โดยไม่ตัดส่วนลงชื่อไปหน้าถัดไป
+- ปรับโลโก้ทุกแบบฟอร์ม พร้อม class `pdf-logo` ไม่จำกัดเฉพาะรูปแรกของเอกสารรวม
+- รองรับ class `pdf-header`, `pdf-signatures`, `pdf-keep`, `pdf-break-before` สำหรับบอกกลุ่มเนื้อหา
+- ตรวจ Container ที่ซ้อน/ทับกัน และแสดงข้อความเมื่อไม่พบหน้าในโหมดแยกหน้า
+- เพิ่ม browser regression สำหรับสองแบบฟอร์มต่างความสูง ตรวจรูปโลโก้ ส่วนลงชื่อ และช่องว่างระหว่างชุด
+
 ## [1.0.3](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.3) — 2026-10-16
 
 ### Added

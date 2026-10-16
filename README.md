@@ -4,12 +4,12 @@
 
 **ส่งออกเอกสารจาก Budibase เป็น PDF พร้อมโลโก้ ลายน้ำ และท้ายกระดาษ**
 
-[![Version](https://img.shields.io/badge/version-1.0.3-2563eb)](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.3)
+[![Version](https://img.shields.io/badge/version-1.0.4-2563eb)](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4)
 [![Budibase](https://img.shields.io/badge/Budibase-3.4.1-6e56cf)](https://github.com/Budibase/budibase/tree/3.4.1)
 [![Svelte](https://img.shields.io/badge/Svelte-3.59.2-ff3e00?logo=svelte&logoColor=white)](https://svelte.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-16a34a)](LICENSE)
 
-[**ดาวน์โหลด v1.0.3**](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.3) · [ติดตั้ง](#installation) · [ตั้งค่า](#configuration) · [ประวัติเวอร์ชัน](CHANGELOG.md)
+[**ดาวน์โหลด v1.0.4**](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4) · [ติดตั้ง](#installation) · [ตั้งค่า](#configuration) · [ประวัติเวอร์ชัน](CHANGELOG.md)
 
 </div>
 
@@ -26,6 +26,7 @@ PDF Downloader เป็น custom component สำหรับ **Budibase 3.4.1
 | ความสามารถ | รายละเอียด |
 | :--- | :--- |
 | **จัดหน้าเอกสาร** | A4 / Letter แนวตั้งหรือแนวนอน พร้อมขอบกระดาษที่ปรับได้ |
+| **แบบฟอร์มแยกหน้า** | ใช้ class `pdf-page` จัดแต่ละชุดพร้อมส่วนหัวและลงชื่อเป็นกระดาษหนึ่งหน้า |
 | **พอดีหนึ่งหน้า** | ย่อทั้งความกว้างและความสูง โดยกันพื้นที่ท้ายกระดาษก่อน เพื่อรวมส่วนลงชื่อ |
 | **รายงานหลายหน้า** | แบ่งหน้าอัตโนมัติ พร้อมพยายามหลีกเลี่ยงการตัดกลางแถวตารางและย่อหน้า |
 | **โลโก้ส่วนหัว** | รักษาสัดส่วนจริงของรูป กำหนดขนาดสูงสุดและเลือกโลโก้ด้วย CSS selector |
@@ -51,12 +52,12 @@ PDF Downloader เป็น custom component สำหรับ **Budibase 3.4.1
 
 ### 1. ติดตั้งปลั๊กอิน
 
-1. ดาวน์โหลด **`pdf-downloader-1.0.3.tar.gz`** จาก [Release v1.0.3](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.3) ในส่วน **Assets** — ไม่ใช่ Source code ZIP/TAR
+1. ดาวน์โหลด **`pdf-downloader-1.0.4.tar.gz`** จาก [Release v1.0.4](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4) ในส่วน **Assets** — ไม่ใช่ Source code ZIP/TAR
 2. เปิด **Plugins** ใน Budibase workspace แล้วอัปโหลดไฟล์ `.tar.gz` โดยไม่แตกไฟล์
 3. เปิดแอปใน **Design** แล้วเพิ่ม component **PDF Downloader** หรือ `pdf-downloader`
 4. ตั้งค่าเอกสาร แล้วทดสอบปุ่ม **PDF Download** ใน **Preview**
 
-บัญชีและการติดตั้ง Budibase ต้องเปิดใช้ custom plugins หากดาวน์โหลดจาก Release ไม่ได้ ใช้ [แพ็กเกจใน repository](releases/pdf-downloader-1.0.3.tar.gz) แล้วกด **Download raw file**
+บัญชีและการติดตั้ง Budibase ต้องเปิดใช้ custom plugins หากดาวน์โหลดจาก Release ไม่ได้ ใช้ [แพ็กเกจใน repository](releases/pdf-downloader-1.0.4.tar.gz) แล้วกด **Download raw file**
 
 ### 2. เลือกเนื้อหาที่ต้องการส่งออก
 
@@ -92,6 +93,39 @@ Screen
 
 <a id="configuration"></a>
 
+## แบบฟอร์มหลายชุด: หน้าแรกถูก แต่หน้าที่สองเลื่อนหรือมีหน้าลงชื่อเกิน
+
+ตั้ง **การจัดหน้า PDF → แบบฟอร์มแยกหน้า — หนึ่งชุดต่อหน้า** แล้วกำหนด **CSS selector ของหน้าแบบฟอร์ม** เป็น `.pdf-page` (ค่าเริ่มต้น) แต่ละชุดต้องมี Container ของตัวเองที่รวม **ส่วนหัว + ตาราง/ข้อมูล + ส่วนลงชื่อ**
+
+```text
+PDF Downloader
+└── Container เอกสารรวม
+    ├── Container ชุดที่ 1  [class: pdf-page]
+    │   ├── ส่วนหัว       [class: pdf-header]
+    │   ├── เนื้อหา
+    │   └── ส่วนลงชื่อ    [class: pdf-signatures]
+    └── Container ชุดที่ 2  [class: pdf-page]
+        ├── ส่วนหัว       [class: pdf-header]
+        ├── เนื้อหา
+        └── ส่วนลงชื่อ    [class: pdf-signatures]
+```
+
+class เหล่านี้เป็นเครื่องหมายให้ปลั๊กอิน ไม่ต้องเขียน CSS เพื่อบังคับพิกัด และไม่บังคับเปลี่ยนหน้า Budibase เดิม ดู [โครงสร้าง HTML ตัวอย่าง](docs/examples/page-classes.html)
+
+**ถ้า component ใน Budibase ไม่มีช่องเพิ่ม class:** ไม่ต้องใส่ข้อความ `class=...` ในช่อง Styles/CSS ให้ใช้ selector ของ Container ที่มีอยู่แทน เช่น `[data-id="รหัสชุดแรก"], [data-id="รหัสชุดสอง"]` ใน **CSS selector ของหน้าแบบฟอร์ม** โดยแทนด้วย ID จริงจาก DOM ภายใน Preview ไม่ใช่ ID ของกรอบ editor หรือชื่อในต้นไม้ รองรับ wrapper ของ Budibase ที่ใช้ `display: contents`
+
+| Class | หน้าที่ |
+| :--- | :--- |
+| `pdf-page` | ขอบเขตหนึ่งแบบฟอร์มต่อหนึ่งกระดาษ ต้องรวมส่วนลงชื่อและไม่ซ้อนกับ pdf-page อื่น |
+| `pdf-header` | ส่วนหัวที่ควรอยู่ด้วยกันเมื่อใช้การแบ่งหน้าปกติ |
+| `pdf-logo` | เลือกโลโก้ของแต่ละชุด; ใส่บน img หรือ container ที่มี img |
+| `pdf-signatures` / `pdf-keep` | กลุ่มเนื้อหาที่ควรอยู่ด้วยกันเมื่อแบ่งหน้าปกติ |
+| `pdf-break-before` | บังคับเริ่มหน้าใหม่ในโหมดแบ่งหน้าปกติ |
+
+โหมดแยกหน้าจะส่งออก **เฉพาะ Container ที่ selector เลือก** ตามลำดับ DOM ไม่รวมช่องว่างระหว่างชุดหรือเนื้อหานอก Container แต่ละชุดจะคงสัดส่วน จัดกลางแนวนอน และย่อเท่าที่จำเป็นเพื่อให้ครบในพื้นที่ก่อน footer โลโก้ถูกปรับทุกชุด เลขหน้าและลายน้ำยังเป็นของแต่ละกระดาษ การย่ออิสระอาจทำให้ขนาดตัวอักษรของชุดที่ยาวกว่าเล็กลง
+
+โหมด **อัตโนมัติ** ก็ใช้ขอบเขตนี้เมื่อพบ `.pdf-page`; หากไม่พบจะแบ่งแบบเดิม โหมด **พอดีหนึ่งหน้า** หมายถึงเอกสารรวมทั้งหมดหนึ่งหน้า ส่วน **หลายหน้า** ใช้การแบ่งภาพต่อเนื่องแบบเดิม ไม่ใช้ขอบเขตแบบฟอร์ม
+
 ## การตั้งค่า component
 
 ### หน้ากระดาษและไฟล์
@@ -102,6 +136,7 @@ Screen
 | ชื่อไฟล์ PDF | `document` | รองรับภาษาไทยและ binding |
 | ขนาดกระดาษ | A4 | A4 หรือ Letter |
 | แนวกระดาษ | portrait | portrait หรือ landscape |
+| CSS selector ของหน้าแบบฟอร์ม | `.pdf-page` | ใช้ในโหมดแยกหน้าและอัตโนมัติ |
 | การจัดหน้า PDF | อัตโนมัติ | รวมส่วนที่เกินหน้าเล็กน้อยโดยย่อไม่เกิน 20%; หรือเลือกหนึ่งหน้า/หลายหน้า |
 | ขอบกระดาษ | 12 มม. | ปรับได้ 5–30 มม. |
 | ความละเอียด | 2 | ปรับได้ 1–3; ลดเหลือ 1 หากเอกสารยาว |
@@ -177,7 +212,7 @@ npm test
 npm run dev
 ```
 
-แพ็กเกจที่สร้างอยู่ใน `dist/pdf-downloader-1.0.3.tar.gz` หน้า demo ใช้ `demo/App.svelte` เมื่อแก้ source ให้รัน `npm run build:demo` ใหม่หรือ restart `npm run dev` เนื่องจากไม่ได้เปิด Svelte HMR
+แพ็กเกจที่สร้างอยู่ใน `dist/pdf-downloader-1.0.4.tar.gz` หน้า demo ใช้ `demo/App.svelte` เมื่อแก้ source ให้รัน `npm run build:demo` ใหม่หรือ restart `npm run dev` เนื่องจากไม่ได้เปิด Svelte HMR
 
 ทดสอบในเบราว์เซอร์:
 

@@ -6,6 +6,7 @@ export function fitHeaderLogo(root, options, page) {
   if (options.fitLogo === false) return
   const selector = String(options.logoSelector || '').trim()
   let image
+  const marked = !selector ? root.querySelectorAll('.pdf-logo') : []
   if (selector) {
     let matches
     try { matches = root.querySelectorAll(selector) } catch { throw new Error('CSS selector ของโลโก้ไม่ถูกต้อง') }
@@ -14,6 +15,11 @@ export function fitHeaderLogo(root, options, page) {
     const images = selected.tagName === 'IMG' ? [selected] : selected.querySelectorAll('img')
     if (images.length !== 1) throw new Error('ส่วนโลโก้ที่เลือกต้องมีรูป img เพียงหนึ่งรูป')
     image = images[0]
+  } else if (marked.length) {
+    if (marked.length !== 1) throw new Error('แต่ละหน้าแบบฟอร์มต้องมี pdf-logo เพียงหนึ่งรายการ')
+    const node = marked[0]
+    image = node.tagName === 'IMG' ? node : node.querySelector('img')
+    if (!image) throw new Error('pdf-logo ต้องเป็น img หรือ Container ที่มีรูป img')
   } else {
     const bounds = root.getBoundingClientRect()
     image = Array.from(root.querySelectorAll('img')).find(img => {

@@ -71,6 +71,10 @@
             "value": "auto"
           },
           {
+            "label": "แบบฟอร์มแยกหน้า — หนึ่งชุดต่อหน้า",
+            "value": "forms"
+          },
+          {
             "label": "พอดีหนึ่งหน้า — รวมส่วนลงชื่อ",
             "value": "single"
           },
@@ -79,6 +83,12 @@
             "value": "multiple"
           }
         ]
+      },
+      {
+        "type": "text",
+        "key": "pageSelector",
+        "label": "CSS selector ของหน้าแบบฟอร์ม",
+        "defaultValue": ".pdf-page"
       },
       {
         "type": "number",
