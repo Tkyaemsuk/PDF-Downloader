@@ -17,7 +17,7 @@ test('oversized blocks split; explicit breaks and exact page endings work', () =
   assert.equal(paginate(2000,1000,[{top:0,bottom:2000}]).length,2)
   assert.deepEqual(paginate(1500,1000,[],[500]), [{start:0,height:500},{start:500,height:1000}])
   assert.throws(()=>paginate(5,0))
-  assert.throws(()=>paginate(101,1), /100/)
+  assert.throws(()=>paginate(501,1), /500/)
 })
 test('download filename stays usable and preserves Thai', () => {
   assert.equal(filename('รายงาน/2569.pdf'),'รายงาน-2569.pdf')

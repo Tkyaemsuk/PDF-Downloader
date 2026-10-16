@@ -56,109 +56,133 @@ export async function createPdf(target, options = {}, progress = () => {}) {
   let blocks = [], forced = [], regions = []
   const quality = number(options.quality, 2, 1, 3)
   progress('กำลังจัดหน้าเอกสาร…')
-  let cloneFrame
-  const capture = await html2canvas(target, {
-    scale: quality, useCORS: true, allowTaint: false, backgroundColor: '#ffffff',
-    logging: false, imageTimeout: 15000,
-    ignoreElements: element => element.hasAttribute('data-pdf-ignore'),
-    onclone: async (doc, clone) => {
-      cloneFrame = doc.defaultView.frameElement
-      // Expand scrolling containers in the clone, leaving the live Budibase screen untouched.
-      for (const el of [clone, ...clone.querySelectorAll('*')]) {
-        const style = doc.defaultView.getComputedStyle(el)
-        if (['auto', 'scroll'].includes(style.overflowY)) {
-          el.style.setProperty('height', 'auto', 'important')
-          el.style.setProperty('max-height', 'none', 'important')
-          el.style.setProperty('overflow-y', 'visible', 'important')
+  let cloneFrame, snapshot, documentWidth, documentHeight, activeCapture, activePage, renderFrame
+  try {
+    // Keep a stable DOM snapshot but allocate only a 1px measurement canvas.
+    const measurement = await html2canvas(target, {
+      width: 1, height: 1, scale: 1, removeContainer: false, useCORS: true, allowTaint: false, backgroundColor: '#ffffff',
+      logging: false, imageTimeout: 15000,
+      ignoreElements: element => element.hasAttribute('data-pdf-ignore'),
+      onclone: async (doc, clone) => {
+        cloneFrame = doc.defaultView.frameElement
+        snapshot = clone
+        // Expand scrolling containers in the clone, leaving the live Budibase screen untouched.
+        for (const el of [clone, ...clone.querySelectorAll('*')]) {
+          const style = doc.defaultView.getComputedStyle(el)
+          if (['auto', 'scroll'].includes(style.overflowY)) {
+            el.style.setProperty('height', 'auto', 'important')
+            el.style.setProperty('max-height', 'none', 'important')
+            el.style.setProperty('overflow-y', 'visible', 'important')
+          }
+          if (['auto', 'scroll'].includes(style.overflowX)) el.style.setProperty('overflow-x', 'visible', 'important')
+          if (['fixed', 'sticky'].includes(style.position)) el.style.setProperty('position', 'static', 'important')
+          el.style.setProperty('animation', 'none', 'important')
+          el.style.setProperty('transition', 'none', 'important')
         }
-        if (['auto', 'scroll'].includes(style.overflowX)) el.style.setProperty('overflow-x', 'visible', 'important')
-        if (['fixed', 'sticky'].includes(style.position)) el.style.setProperty('position', 'static', 'important')
-        el.style.setProperty('animation', 'none', 'important')
-        el.style.setProperty('transition', 'none', 'important')
+        // Include wide tables without changing the responsive viewport or grid configuration.
+        clone.style.setProperty('width', `${Math.max(clone.getBoundingClientRect().width, clone.scrollWidth)}px`, 'important')
+        clone.style.setProperty('max-width', 'none', 'important')
+        await doc.fonts.ready
+        const forms = findFormPages(clone, options)
+        // Each logical form gets the same logo treatment, not just the first image.
+        for (const scope of forms.length ? forms : [clone]) fitHeaderLogo(scope, options, g)
+        regions = formRegions(clone, forms, 1)
+        const rect = clone.getBoundingClientRect()
+        if (!rect.width || !rect.height) throw new Error('ส่วนเอกสารถูกซ่อนหรือไม่มีขนาด')
+        documentWidth = Math.ceil(rect.width)
+        documentHeight = Math.ceil(rect.height)
+        const candidates = clone.querySelectorAll('tr,p,h1,h2,h3,h4,h5,h6,img,svg,canvas,[data-pdf-keep],.pdf-header,.pdf-signatures,.pdf-keep')
+        blocks = Array.from(candidates).map(el => {
+          const r = el.getBoundingClientRect()
+          return { top: Math.floor(r.top - rect.top), bottom: Math.ceil(r.bottom - rect.top) }
+        })
+        forced = Array.from(clone.querySelectorAll('[data-pdf-break-before],.pdf-break-before')).map(el => Math.floor(el.getBoundingClientRect().top - rect.top))
+        // html2canvas skips inaccessible cross-origin images. Detect this instead of losing them silently.
+        for (const img of clone.querySelectorAll('img')) {
+          const source = img.currentSrc || img.src
+          if (source && !source.startsWith('data:') && !source.startsWith('blob:') && new URL(source, doc.baseURI).origin !== location.origin) await loadImage(source)
+        }
       }
-      // Include wide tables without changing the responsive viewport or grid configuration.
-      clone.style.setProperty('width', `${Math.max(clone.getBoundingClientRect().width, clone.scrollWidth)}px`, 'important')
-      clone.style.setProperty('max-width', 'none', 'important')
-      await doc.fonts.ready
-      const forms = findFormPages(clone, options)
-      // Each logical form gets the same logo treatment, not just the first image.
-      for (const scope of forms.length ? forms : [clone]) fitHeaderLogo(scope, options, g)
-      regions = formRegions(clone, forms, quality)
-      const rect = clone.getBoundingClientRect()
-      if (!rect.width || !rect.height) throw new Error('ส่วนเอกสารถูกซ่อนหรือไม่มีขนาด')
-      if (rect.width * quality > 16000 || rect.height * quality > 16000 || rect.width * rect.height * quality * quality > 32000000) {
-        throw new Error('เอกสารมีขนาดใหญ่เกินไป กรุณาลดความละเอียดหรือแบ่งข้อมูลเป็นชุดเล็กลง')
-      }
-      const candidates = clone.querySelectorAll('tr,p,h1,h2,h3,h4,h5,h6,img,svg,canvas,[data-pdf-keep],.pdf-header,.pdf-signatures,.pdf-keep')
-      blocks = Array.from(candidates).map(el => {
-        const r = el.getBoundingClientRect()
-        return { top: Math.floor((r.top - rect.top) * quality), bottom: Math.ceil((r.bottom - rect.top) * quality) }
+    })
+    measurement.width = measurement.height = 0
+    const layout = regions.length ? null : planPages(documentWidth, documentHeight, g, options.paginationMode, blocks, forced)
+    const pages = regions.length ? regions.map(region => {
+      const fitted = planPages(region.width, region.height, g, 'single')
+      return { ...region, scale: fitted.scale, x: fitted.x }
+    }) : layout.pages.map(slice => ({ ...slice, left: 0, width: documentWidth, scale: layout.scale, x: layout.x }))
+    const pdf = await PDFDocument.create()
+    pdf.setTitle(String(options.fileName || 'document'))
+    pdf.setCreator('PDF Downloader — Budibase 3.4.1 / Svelte 3')
+    const pxPerMm = Math.min(10, documentWidth * quality / g.bodyWidth)
+    const font = getComputedStyle(target).fontFamily || 'sans-serif'
+    for (let i = 0; i < pages.length; i++) {
+      progress(`กำลังสร้าง PDF ${i + 1}/${pages.length}…`)
+      const slice = pages[i]
+      // Crop in CSS coordinates before rasterization; large document height no longer
+      // controls canvas allocation. Bound each raster to 3,000px/side and 6MP.
+      const rasterScale = Math.min(quality, 3000 / slice.width, 3000 / slice.height, Math.sqrt(6000000 / (slice.width * slice.height)))
+      activeCapture = await html2canvas(snapshot, {
+        x: slice.left, y: slice.start, width: slice.width, height: slice.height,
+        scale: rasterScale, useCORS: true, allowTaint: false, backgroundColor: '#ffffff',
+        logging: false, imageTimeout: 15000,
+        onclone: doc => { renderFrame = doc.defaultView.frameElement },
+        ignoreElements: element => element.hasAttribute('data-pdf-ignore')
       })
-      forced = Array.from(clone.querySelectorAll('[data-pdf-break-before],.pdf-break-before')).map(el => Math.floor((el.getBoundingClientRect().top - rect.top) * quality))
-      // html2canvas skips inaccessible cross-origin images. Detect this instead of losing them silently.
-      for (const img of clone.querySelectorAll('img')) {
-        const source = img.currentSrc || img.src
-        if (source && !source.startsWith('data:') && !source.startsWith('blob:') && new URL(source, doc.baseURI).origin !== location.origin) await loadImage(source)
+      renderFrame = null
+      const pageCanvas = activePage = canvas(g.width * pxPerMm, g.height * pxPerMm)
+      const ctx = pageCanvas.getContext('2d')
+      const m = g.margin * pxPerMm, bodyWidth = g.bodyWidth * pxPerMm
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+      ctx.drawImage(activeCapture, slice.x * pxPerMm, m, slice.width * slice.scale * pxPerMm, slice.height * slice.scale * pxPerMm)
+      activeCapture.width = activeCapture.height = 0
+      activeCapture = null
+      // Low-opacity watermark over the captured background remains visible on opaque Budibase cards.
+      // It is restricted to the document body and never covers the footer.
+      if (options.watermarkText || watermark) {
+        ctx.save()
+        ctx.beginPath(); ctx.rect(m, m, bodyWidth, g.bodyHeight * pxPerMm); ctx.clip()
+        ctx.globalAlpha = number(options.watermarkOpacity, 0.08, 0, 0.3)
+        ctx.translate(pageCanvas.width / 2, m + g.bodyHeight * pxPerMm / 2)
+        ctx.rotate(number(options.watermarkAngle, -30, -180, 180) * Math.PI / 180)
+        if (watermark) {
+          const ratio = Math.min(bodyWidth * 0.55 / watermark.width, g.bodyHeight * pxPerMm * 0.45 / watermark.height)
+          ctx.drawImage(watermark, -watermark.width * ratio / 2, -watermark.height * ratio / 2, watermark.width * ratio, watermark.height * ratio)
+        }
+        if (options.watermarkText) {
+          const text = String(options.watermarkText)
+          ctx.font = `600 ${12 * pxPerMm}px ${font}`
+          const fit = Math.min(1, bodyWidth * 0.8 / ctx.measureText(text).width)
+          ctx.font = `600 ${12 * pxPerMm * fit}px ${font}`
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#64748b'
+          ctx.fillText(text, 0, watermark ? 20 * pxPerMm : 0)
+        }
+        ctx.restore()
       }
+      const footerY = (g.height - g.margin - 5) * pxPerMm
+      ctx.strokeStyle = '#dbe2ea'; ctx.lineWidth = 0.2 * pxPerMm
+      ctx.beginPath(); ctx.moveTo(m, footerY - 5 * pxPerMm); ctx.lineTo(pageCanvas.width - m, footerY - 5 * pxPerMm); ctx.stroke()
+      const size = number(options.footerFontSize, 9, 7, 14) * 25.4 / 72 * pxPerMm
+      const join = (label, value) => [label, value].filter(v => v != null && String(v).length).join(' ')
+      footerText(ctx, join(options.startDateLabel ?? 'วันที่เริ่มใช้งาน', options.startDate), m, footerY, bodyWidth * 0.4, 'left', size, font)
+      if (options.showPageNumbers !== false) footerText(ctx, `${i + 1}/${pages.length}`, pageCanvas.width / 2, footerY, bodyWidth * 0.16, 'center', size, font)
+      footerText(ctx, join(options.documentCodeLabel ?? 'รหัสเอกสาร', options.documentCode), pageCanvas.width - m, footerY, bodyWidth * 0.4, 'right', size, font)
+      const img = await pdf.embedPng(pageCanvas.toDataURL('image/png'))
+      await img.embed() // Release decoded image buffers after each page, keeping compressed PDF data.
+      const page = pdf.addPage([g.width * 72 / 25.4, g.height * 72 / 25.4])
+      page.drawImage(img, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() })
+      pageCanvas.width = pageCanvas.height = 0
+      activePage = null
+      await new Promise(resolve => setTimeout(resolve, 0))
     }
-  }).catch(error => { cloneFrame?.remove(); throw error })
-  const layout = regions.length ? null : planPages(capture.width, capture.height, g, options.paginationMode, blocks, forced)
-  const pages = regions.length ? regions.map(region => {
-    const fitted = planPages(region.width, region.height, g, 'single')
-    return { ...region, scale: fitted.scale, x: fitted.x }
-  }) : layout.pages.map(slice => ({ ...slice, left: 0, width: capture.width, scale: layout.scale, x: layout.x }))
-  const pdf = await PDFDocument.create()
-  pdf.setTitle(String(options.fileName || 'document'))
-  pdf.setCreator('PDF Downloader — Budibase 3.4.1 / Svelte 3')
-  const pxPerMm = Math.min(10, capture.width / g.bodyWidth)
-  const font = getComputedStyle(target).fontFamily || 'sans-serif'
-  for (let i = 0; i < pages.length; i++) {
-    progress(`กำลังสร้าง PDF ${i + 1}/${pages.length}…`)
-    const pageCanvas = canvas(g.width * pxPerMm, g.height * pxPerMm)
-    const ctx = pageCanvas.getContext('2d')
-    const m = g.margin * pxPerMm, bodyWidth = g.bodyWidth * pxPerMm
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-    const slice = pages[i]
-    ctx.drawImage(capture, slice.left, slice.start, slice.width, slice.height, slice.x * pxPerMm, m, slice.width * slice.scale * pxPerMm, slice.height * slice.scale * pxPerMm)
-    // Low-opacity watermark over the captured background remains visible on opaque Budibase cards.
-    // It is restricted to the document body and never covers the footer.
-    if (options.watermarkText || watermark) {
-      ctx.save()
-      ctx.beginPath(); ctx.rect(m, m, bodyWidth, g.bodyHeight * pxPerMm); ctx.clip()
-      ctx.globalAlpha = number(options.watermarkOpacity, 0.08, 0, 0.3)
-      ctx.translate(pageCanvas.width / 2, m + g.bodyHeight * pxPerMm / 2)
-      ctx.rotate(number(options.watermarkAngle, -30, -180, 180) * Math.PI / 180)
-      if (watermark) {
-        const ratio = Math.min(bodyWidth * 0.55 / watermark.width, g.bodyHeight * pxPerMm * 0.45 / watermark.height)
-        ctx.drawImage(watermark, -watermark.width * ratio / 2, -watermark.height * ratio / 2, watermark.width * ratio, watermark.height * ratio)
-      }
-      if (options.watermarkText) {
-        const text = String(options.watermarkText)
-        ctx.font = `600 ${12 * pxPerMm}px ${font}`
-        const fit = Math.min(1, bodyWidth * 0.8 / ctx.measureText(text).width)
-        ctx.font = `600 ${12 * pxPerMm * fit}px ${font}`
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#64748b'
-        ctx.fillText(text, 0, watermark ? 20 * pxPerMm : 0)
-      }
-      ctx.restore()
-    }
-    const footerY = (g.height - g.margin - 5) * pxPerMm
-    ctx.strokeStyle = '#dbe2ea'; ctx.lineWidth = 0.2 * pxPerMm
-    ctx.beginPath(); ctx.moveTo(m, footerY - 5 * pxPerMm); ctx.lineTo(pageCanvas.width - m, footerY - 5 * pxPerMm); ctx.stroke()
-    const size = number(options.footerFontSize, 9, 7, 14) * 25.4 / 72 * pxPerMm
-    const join = (label, value) => [label, value].filter(v => v != null && String(v).length).join(' ')
-    footerText(ctx, join(options.startDateLabel ?? 'วันที่เริ่มใช้งาน', options.startDate), m, footerY, bodyWidth * 0.4, 'left', size, font)
-    if (options.showPageNumbers !== false) footerText(ctx, `${i + 1}/${pages.length}`, pageCanvas.width / 2, footerY, bodyWidth * 0.16, 'center', size, font)
-    footerText(ctx, join(options.documentCodeLabel ?? 'รหัสเอกสาร', options.documentCode), pageCanvas.width - m, footerY, bodyWidth * 0.4, 'right', size, font)
-    const img = await pdf.embedPng(pageCanvas.toDataURL('image/png'))
-    const page = pdf.addPage([g.width * 72 / 25.4, g.height * 72 / 25.4])
-    page.drawImage(img, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() })
-    pageCanvas.width = pageCanvas.height = 0
-    await new Promise(resolve => setTimeout(resolve, 0))
+    progress(`กำลังบันทึก PDF ${pages.length} หน้า…`)
+    return { bytes: await pdf.save(), pageCount: pages.length }
+  } finally {
+    if (activeCapture) activeCapture.width = activeCapture.height = 0
+    if (activePage) activePage.width = activePage.height = 0
+    renderFrame?.remove()
+    cloneFrame?.remove()
   }
-  capture.width = capture.height = 0
-  return { bytes: await pdf.save(), pageCount: pages.length }
 }
 export async function downloadPdf(target, options, progress) {
   const result = await createPdf(target, options, progress)

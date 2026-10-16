@@ -34,7 +34,7 @@ export function paginate(height, capacity, blocks = [], forced = []) {
     end = Math.max(start + 1, Math.floor(end))
     pages.push({ start, height: end - start })
     start = end
-    if (pages.length > 100) throw new Error('เอกสารเกิน 100 หน้า กรุณาแบ่งข้อมูลก่อนดาวน์โหลด')
+    if (pages.length > 500) throw new Error('เอกสารเกิน 500 หน้า กรุณาแบ่งข้อมูลก่อนดาวน์โหลด')
   }
   return pages
 }

@@ -4,12 +4,12 @@
 
 **ส่งออกเอกสารจาก Budibase เป็น PDF พร้อมโลโก้ ลายน้ำ และท้ายกระดาษ**
 
-[![Version](https://img.shields.io/badge/version-1.0.4-2563eb)](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4)
+[![Version](https://img.shields.io/badge/version-1.0.5-2563eb)](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.5)
 [![Budibase](https://img.shields.io/badge/Budibase-3.4.1-6e56cf)](https://github.com/Budibase/budibase/tree/3.4.1)
 [![Svelte](https://img.shields.io/badge/Svelte-3.59.2-ff3e00?logo=svelte&logoColor=white)](https://svelte.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-16a34a)](LICENSE)
 
-[**ดาวน์โหลด v1.0.4**](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4) · [ติดตั้ง](#installation) · [ตั้งค่า](#configuration) · [ประวัติเวอร์ชัน](CHANGELOG.md)
+[**ดาวน์โหลด v1.0.5**](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.5) · [ติดตั้ง](#installation) · [ตั้งค่า](#configuration) · [ประวัติเวอร์ชัน](CHANGELOG.md)
 
 </div>
 
@@ -52,12 +52,12 @@ PDF Downloader เป็น custom component สำหรับ **Budibase 3.4.1
 
 ### 1. ติดตั้งปลั๊กอิน
 
-1. ดาวน์โหลด **`pdf-downloader-1.0.4.tar.gz`** จาก [Release v1.0.4](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.4) ในส่วน **Assets** — ไม่ใช่ Source code ZIP/TAR
+1. ดาวน์โหลด **`pdf-downloader-1.0.5.tar.gz`** จาก [Release v1.0.5](https://github.com/Tkyaemsuk/PDF-Downloader/releases/tag/v1.0.5) ในส่วน **Assets** — ไม่ใช่ Source code ZIP/TAR
 2. เปิด **Plugins** ใน Budibase workspace แล้วอัปโหลดไฟล์ `.tar.gz` โดยไม่แตกไฟล์
 3. เปิดแอปใน **Design** แล้วเพิ่ม component **PDF Downloader** หรือ `pdf-downloader`
 4. ตั้งค่าเอกสาร แล้วทดสอบปุ่ม **PDF Download** ใน **Preview**
 
-บัญชีและการติดตั้ง Budibase ต้องเปิดใช้ custom plugins หากดาวน์โหลดจาก Release ไม่ได้ ใช้ [แพ็กเกจใน repository](releases/pdf-downloader-1.0.4.tar.gz) แล้วกด **Download raw file**
+บัญชีและการติดตั้ง Budibase ต้องเปิดใช้ custom plugins หากดาวน์โหลดจาก Release ไม่ได้ ใช้ [แพ็กเกจใน repository](releases/pdf-downloader-1.0.5.tar.gz) แล้วกด **Download raw file**
 
 ### 2. เลือกเนื้อหาที่ต้องการส่งออก
 
@@ -207,7 +207,7 @@ class เหล่านี้เป็นเครื่องหมายใ�
 - **PDF เป็นภาพ:** ข้อความไม่สามารถเลือก ค้นหา หรืออ่านเป็นข้อความด้วย screen reader; ลิงก์และช่องกรอกไม่เป็น interactive PDF
 - **ความเหมือนกับหน้าจอ:** CSS บางชนิด, iframe, video, WebGL และ third-party widgets อาจแสดงต่างจากหน้าจอ
 - **รูปภาพและฟอนต์:** ต้องโหลดได้ในเบราว์เซอร์ ฟอนต์ไทยต้องมีในหน้าจอหรือเครื่อง; CSS background ที่ไม่อนุญาต CORS อาจไม่ปรากฏ
-- **เอกสารขนาดใหญ่:** จำกัด canvas 16,000 px ต่อด้าน, 32 ล้านพิกเซล และ 100 หน้า หากเกินให้ลดความละเอียดหรือแบ่งข้อมูล
+- **เอกสารขนาดใหญ่:** จับภาพทีละหน้าจากสำเนา DOM คงที่ ไม่สร้าง canvas ยาวทั้งเอกสาร รองรับสูงสุด 500 หน้า จำกัดภาพที่จับแต่ละหน้าไม่เกิน 3,000 px ต่อด้าน / 6 ล้านพิกเซล และปรับความละเอียดลงอัตโนมัติหากจำเป็น หน่วยความจำของ DOM และไฟล์ PDF รวมยังขึ้นกับข้อมูลและเบราว์เซอร์ จึงไม่รับประกันเอกสารทุกขนาดบนทุกเครื่อง
 - **การขึ้นหน้าใหม่:** ใช้ `data-pdf-keep` กับ block ที่ต้องการเก็บด้วยกัน และ `data-pdf-break-before` เพื่อขึ้นหน้าใหม่ได้เมื่อควบคุม HTML; โหมดหนึ่งหน้าจะรวมทุกส่วน ส่วน block ที่ใหญ่เกินหน้าในโหมดหลายหน้าจำเป็นต้องแบ่ง
 
 ## การแก้ปัญหาเบื้องต้น
@@ -221,6 +221,18 @@ class เหล่านี้เป็นเครื่องหมายใ�
 | รูปไม่ปรากฏ | ตรวจ URL, สิทธิ์เข้าถึง และ CORS |
 | อัปโหลดพบ Cloudflare 502 | ตรวจสุขภาพ Budibase/reverse proxy และ server logs; 502 เพียงอย่างเดียวไม่ยืนยันว่าแพ็กเกจเสีย |
 
+## ส่งออกเอกสารขนาดใหญ่ (ตั้งแต่ 1.0.5)
+
+ใช้งานด้วย Settings เดิมได้เลย รวมถึงความละเอียด 3 และ selector ของแบบฟอร์ม ระบบวัดและเก็บสำเนาเอกสารก่อน จากนั้นสร้างภาพและใส่ PDF ทีละหน้า จึงไม่ติดขีดจำกัด 16,000 px / 32 ล้านพิกเซลของเอกสารรวมแบบเดิม และไม่เปลี่ยนข้อมูลระหว่างหน้าหากหน้าจอจริงอัปเดตระหว่างส่งออก
+
+- แบบฟอร์มหลายชุด: แนะนำ **แบบฟอร์มแยกหน้า — หนึ่งชุดต่อหน้า**
+- รายงานต่อเนื่องยาว: ใช้ **หลายหน้า** หรือ **อัตโนมัติ**
+- **พอดีหนึ่งหน้า** ยังหมายถึงย่อเอกสารรวมทั้งหมดลงหนึ่งหน้า จึงอาจอ่านยากสำหรับข้อมูลจำนวนมาก
+- แสดงความคืบหน้าระหว่างสร้างแต่ละหน้า คืน canvas และข้อมูลภาพที่ถอดรหัสหลังใช้ และล้าง iframe เมื่อสำเร็จหรือเกิดข้อผิดพลาด
+- เอกสารยาวอาจใช้เวลามากขึ้น เพราะอ่าน layout ของสำเนาแต่ละรอบ ข้อมูลและรูปภาพต้นฉบับต้องโหลดครบเหมือนเดิม
+
+การทดสอบครอบคลุมแบบฟอร์ม 16 ชุดที่ความละเอียด 3 (ถ้าจับรวมจะสูง 57,600 px / ประมาณ 138 ล้านพิกเซล) และรายงานต่อเนื่องสูง 20,000 CSS px ตรวจเนื้อหาหน้าสุดท้าย ขนาด canvas และการล้างทรัพยากร ไม่ใช่การรับประกันสมรรถนะครบ 500 หน้าบนทุกอุปกรณ์
+
 ## สำหรับนักพัฒนา
 
 ใช้ **Node.js 22+** และ npm; สภาพแวดล้อมพัฒนาปัจจุบันใช้ Node.js 24 ตัว component คอมไพล์ด้วย Svelte **3.59.2** ที่ตรึงเวอร์ชันไว้
@@ -232,7 +244,7 @@ npm test
 npm run dev
 ```
 
-แพ็กเกจที่สร้างอยู่ใน `dist/pdf-downloader-1.0.4.tar.gz` หน้า demo ใช้ `demo/App.svelte` เมื่อแก้ source ให้รัน `npm run build:demo` ใหม่หรือ restart `npm run dev` เนื่องจากไม่ได้เปิด Svelte HMR
+แพ็กเกจที่สร้างอยู่ใน `dist/pdf-downloader-1.0.5.tar.gz` หน้า demo ใช้ `demo/App.svelte` เมื่อแก้ source ให้รัน `npm run build:demo` ใหม่หรือ restart `npm run dev` เนื่องจากไม่ได้เปิด Svelte HMR
 
 ทดสอบในเบราว์เซอร์:
 

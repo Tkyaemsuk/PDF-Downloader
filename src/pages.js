@@ -25,7 +25,7 @@ export function findFormPages(root, options = {}) {
   if (!visible.length && options.paginationMode === 'forms') {
     throw new Error('ไม่พบหน้าแบบฟอร์ม กรุณาใส่ class pdf-page ให้ Container ของแต่ละชุด หรือกำหนด CSS selector ของหน้าแบบฟอร์ม')
   }
-  if (visible.length > 100) throw new Error('เอกสารเกิน 100 หน้า กรุณาแบ่งข้อมูลก่อนดาวน์โหลด')
+  if (visible.length > 500) throw new Error('เอกสารเกิน 500 หน้า กรุณาแบ่งข้อมูลก่อนดาวน์โหลด')
   return visible
 }
 

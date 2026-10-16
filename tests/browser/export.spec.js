@@ -66,7 +66,7 @@ test('packaged IIFE registers and mounts using Svelte 3 host globals', async ({ 
   expect((await download).suggestedFilename()).toBe('packaged.pdf')
 })
 
-test('single page, image watermark, explicit breaks and oversize error cleanup', async ({ page }) => {
+test('single page, image watermark, explicit breaks and page-limit error cleanup', async ({ page }) => {
   await page.goto('/')
   const result = await page.evaluate(async () => {
     const target = document.createElement('div')
@@ -78,15 +78,15 @@ test('single page, image watermark, explicit breaks and oversize error cleanup',
     const single = await window.createPdf(target, { watermarkImage: logo.toDataURL(), watermarkText: 'ทดสอบ', quality: 1 })
     target.innerHTML += '<h2 data-pdf-break-before>Second page</h2><p>End</p>'
     const split = await window.createPdf(target, { quality: 1 })
-    target.style.height = '20000px'
+    target.style.height = '600000px'
     let error = ''
-    try { await window.createPdf(target, { quality: 1 }) } catch (e) { error = e.message }
+    try { await window.createPdf(target, { quality: 1, paginationMode: 'multiple' }) } catch (e) { error = e.message }
     target.remove()
     return { single: single.pageCount, split: split.pageCount, error, frames: document.querySelectorAll('.html2canvas-container').length }
   })
   expect(result.single).toBe(1)
   expect(result.split).toBe(2)
-  expect(result.error).toContain('ขนาดใหญ่')
+  expect(result.error).toContain('500')
   expect(result.frames).toBe(0)
 })
 
@@ -232,4 +232,55 @@ test('two logical forms keep both logos and signatures on their own PDF pages', 
     expect(image.gap).toBe(0)
   }
   expect(result.missing).toContain('ไม่พบหน้าแบบฟอร์ม')
+})
+
+test('large documents render page-by-page with bounded canvases and preserve the last page', async ({ page }) => {
+  test.setTimeout(240000)
+  await page.goto('/')
+  const result=await page.evaluate(async()=>{
+    const root=document.createElement('div');root.style.cssText='width:800px;background:white'
+    root.innerHTML=Array.from({length:16},(_,i)=>`<section class="pdf-page" style="height:1200px;position:relative;background:white"><h2>Report ${i+1}</h2><div style="position:absolute;bottom:0;left:0;width:800px;height:80px;background:rgb(0,255,0)">Signature ${i+1}</div></section>`).join('')
+    document.body.append(root)
+    const original=HTMLCanvasElement.prototype.getContext
+    const dataURL=HTMLCanvasElement.prototype.toDataURL
+    let maxWidth=0,maxHeight=0,maxArea=0,signatures=0,lastGreenRows=0
+    HTMLCanvasElement.prototype.getContext=function(...args){
+      maxWidth=Math.max(maxWidth,this.width);maxHeight=Math.max(maxHeight,this.height);maxArea=Math.max(maxArea,this.width*this.height)
+      return original.apply(this,args)
+    }
+    HTMLCanvasElement.prototype.toDataURL=function(...args){
+      if(args[0]==='image/png'&&this.height>1000){
+        const ctx=original.call(this,'2d')
+        const px=ctx.getImageData(Math.floor(this.width/2),Math.floor(this.height*0.9),1,1).data
+        if(px[0]<20&&px[1]>240&&px[2]<20)signatures++
+        const column=ctx.getImageData(Math.floor(this.width/2),0,1,this.height).data
+        lastGreenRows=0
+        for(let y=0;y<this.height;y++)if(column[y*4]<20&&column[y*4+1]>240&&column[y*4+2]<20)lastGreenRows++
+      }
+      return dataURL.apply(this,args)
+    }
+    try{
+      // Previously 57,600px high / 138 million pixels at quality=3: rejected.
+      const forms=await window.createPdf(root,{quality:3,paginationMode:'forms'},message=>{
+        if(message==='กำลังสร้าง PDF 1/16…') root.lastElementChild.lastElementChild.style.background='blue'
+      })
+      const formSignatures=signatures
+      root.innerHTML='<h2>Long continuous report</h2><div style="position:absolute;bottom:0;background:lime;height:60px;width:800px">Last row</div>'
+      root.style.position='relative';root.style.height='20000px'
+      const continuous=await window.createPdf(root,{quality:1,paginationMode:'multiple'})
+      const continuousLastRows=lastGreenRows
+      const single=await window.createPdf(root,{quality:3,paginationMode:'single'})
+      return {forms:forms.pageCount,formSignatures,continuous:continuous.pageCount,continuousLastRows,singleLastRows:lastGreenRows,single:single.pageCount,maxWidth,maxHeight,maxArea,frames:document.querySelectorAll('.html2canvas-container').length}
+    }finally{HTMLCanvasElement.prototype.getContext=original;HTMLCanvasElement.prototype.toDataURL=dataURL;root.remove()}
+  })
+  expect(result.forms).toBe(16)
+  expect(result.formSignatures).toBe(16)
+  expect(result.continuous).toBeGreaterThan(15)
+  expect(result.single).toBe(1)
+  expect(result.continuousLastRows).toBeGreaterThan(0)
+  expect(result.singleLastRows).toBeGreaterThan(0)
+  expect(result.maxWidth).toBeLessThanOrEqual(3000)
+  expect(result.maxHeight).toBeLessThanOrEqual(3000)
+  expect(result.maxArea).toBeLessThanOrEqual(6300000)
+  expect(result.frames).toBe(0)
 })
