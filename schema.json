@@ -1,0 +1,143 @@
+{
+  "type": "component",
+  "metadata": {
+    "svelteMajor": 3
+  },
+  "schema": {
+    "name": "PDF Downloader",
+    "friendlyName": "PDF Downloader",
+    "description": "Export a document to PDF with Thai footers and watermarks. Budibase 3.4.1 / Svelte 3.",
+    "icon": "Download",
+    "hasChildren": true,
+    "styles": [
+      "size",
+      "padding",
+      "background",
+      "border",
+      "shadow"
+    ],
+    "settings": [
+      {
+        "type": "text",
+        "key": "targetSelector",
+        "label": "CSS selector ของเอกสาร (ว่าง = components ภายใน)"
+      },
+      {
+        "type": "text",
+        "key": "fileName",
+        "label": "ชื่อไฟล์ PDF",
+        "defaultValue": "document"
+      },
+      {
+        "type": "select",
+        "key": "paperSize",
+        "label": "ขนาดกระดาษ",
+        "defaultValue": "A4",
+        "options": [
+          {
+            "label": "A4",
+            "value": "A4"
+          },
+          {
+            "label": "Letter",
+            "value": "Letter"
+          }
+        ]
+      },
+      {
+        "type": "select",
+        "key": "orientation",
+        "label": "แนวกระดาษ",
+        "defaultValue": "portrait",
+        "options": [
+          {
+            "label": "portrait",
+            "value": "portrait"
+          },
+          {
+            "label": "landscape",
+            "value": "landscape"
+          }
+        ]
+      },
+      {
+        "type": "number",
+        "key": "margin",
+        "label": "ขอบกระดาษ (มม. 5–30)",
+        "defaultValue": 12
+      },
+      {
+        "type": "number",
+        "key": "quality",
+        "label": "ความละเอียด (1–3)",
+        "defaultValue": 2
+      },
+      {
+        "type": "text",
+        "key": "startDateLabel",
+        "label": "ข้อความท้ายซ้าย",
+        "defaultValue": "วันที่เริ่มใช้งาน"
+      },
+      {
+        "type": "text",
+        "key": "startDate",
+        "label": "วันที่เริ่มใช้งาน / Binding",
+        "defaultValue": ""
+      },
+      {
+        "type": "text",
+        "key": "documentCodeLabel",
+        "label": "ข้อความท้ายขวา",
+        "defaultValue": "รหัสเอกสาร"
+      },
+      {
+        "type": "text",
+        "key": "documentCode",
+        "label": "รหัสเอกสาร / Binding",
+        "defaultValue": ""
+      },
+      {
+        "type": "boolean",
+        "key": "showPageNumbers",
+        "label": "แสดงเลขหน้า / จำนวนหน้าทั้งหมด",
+        "defaultValue": true
+      },
+      {
+        "type": "number",
+        "key": "footerFontSize",
+        "label": "ขนาดตัวอักษรท้ายกระดาษ (pt 7–14)",
+        "defaultValue": 9
+      },
+      {
+        "type": "text",
+        "key": "watermarkText",
+        "label": "ข้อความลายน้ำ",
+        "defaultValue": ""
+      },
+      {
+        "type": "text",
+        "key": "watermarkImage",
+        "label": "URL รูปลายน้ำ (ต้องรองรับ CORS)",
+        "defaultValue": ""
+      },
+      {
+        "type": "number",
+        "key": "watermarkOpacity",
+        "label": "ความเข้มลายน้ำ (0–0.3)",
+        "defaultValue": 0.08
+      },
+      {
+        "type": "number",
+        "key": "watermarkAngle",
+        "label": "มุมลายน้ำ (องศา)",
+        "defaultValue": -30
+      },
+      {
+        "type": "boolean",
+        "key": "disabled",
+        "label": "ปิดใช้งานปุ่ม",
+        "defaultValue": false
+      }
+    ]
+  }
+}

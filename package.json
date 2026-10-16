@@ -1,0 +1,31 @@
+{
+  "name": "pdf-downloader",
+  "version": "1.0.0",
+  "description": "PDF Downloader component for Budibase 3.4.1, built with Svelte 3",
+  "license": "MIT",
+  "type": "module",
+  "svelte": "src/Component.svelte",
+  "module": "dist/plugin.min.js",
+  "scripts": {
+    "build": "rollup -c && node scripts/package.mjs",
+    "dev": "npm run build:demo && vite --host 0.0.0.0",
+    "test": "node --test tests/layout.test.mjs",
+    "test:browser": "playwright test",
+    "build:demo": "rollup -c rollup.demo.config.mjs"
+  },
+  "dependencies": {
+    "html2canvas": "1.4.1",
+    "pdf-lib": "1.17.1"
+  },
+  "devDependencies": {
+    "svelte": "3.59.2",
+    "rollup": "4.62.2",
+    "rollup-plugin-svelte": "7.2.3",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/plugin-commonjs": "29.0.2",
+    "@rollup/plugin-json": "6.1.0",
+    "@rollup/plugin-terser": "1.0.0",
+    "vite": "6.4.1",
+    "@playwright/test": "1.58.2"
+  }
+}
