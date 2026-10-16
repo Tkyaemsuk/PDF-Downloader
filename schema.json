@@ -4,7 +4,7 @@
     "svelteMajor": 3
   },
   "schema": {
-    "name": "PDF Downloader",
+    "name": "pdf-downloader",
     "friendlyName": "PDF Downloader",
     "description": "Export a document to PDF with Thai footers and watermarks. Budibase 3.4.1 / Svelte 3.",
     "icon": "Download",

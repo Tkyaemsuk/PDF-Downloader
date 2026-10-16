@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { PDFDocument } from 'pdf-lib'
 import { readFile, writeFile } from 'node:fs/promises'
+import pkg from '../../package.json' with { type: 'json' }
 test('Svelte button downloads a paginated A4 document and leaves source unchanged', async ({ page }) => {
   await page.goto('/')
   const before = await page.locator('#report').innerHTML()
@@ -50,13 +51,16 @@ test('landscape / letter, invalid selectors, image failures, disabled state', as
 test('packaged IIFE registers and mounts using Svelte 3 host globals', async ({ page }) => {
   await page.goto('/')
   await page.addScriptTag({ url: '/dist/plugin.min.js' })
-  const result = await page.evaluate(() => {
-    const plugin = window['##BUDIBASE_CUSTOM_COMPONENTS##'][0]
+  const result = await page.evaluate(packageName => {
+    // Budibase server identifies components by package.name; client registers schema.schema.name.
+    const manifest = Object.fromEntries(window['##BUDIBASE_CUSTOM_COMPONENTS##'].map(p => [`plugin/${p.schema.schema.name}`, p]))
+    const plugin = manifest[`plugin/${packageName}`]
+    if (!plugin) throw new Error(`Budibase cannot resolve plugin/${packageName}`)
     const target = document.createElement('div'); document.body.append(target)
     new plugin.Component({ target, props: { targetSelector: '#report', fileName: 'packaged' } })
     return { name: plugin.schema.schema.name, major: plugin.schema.metadata.svelteMajor }
-  })
-  expect(result).toEqual({name:'PDF Downloader',major:3})
+  }, pkg.name)
+  expect(result).toEqual({name:pkg.name,major:3})
   const download = page.waitForEvent('download')
   await page.getByRole('button', {name:'PDF Download',exact:true}).last().click()
   expect((await download).suggestedFilename()).toBe('packaged.pdf')

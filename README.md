@@ -2,11 +2,11 @@
 
 ปลั๊กอิน component สำหรับ **Budibase 3.4.1** พัฒนาด้วย **Svelte 3.59.2** เท่านั้น (ไม่มี React, Vue หรือ Svelte 4/5) ปุ่มใน Design แสดง **PDF Download**
 
-ไฟล์พร้อมติดตั้ง: [pdf-downloader-1.0.0.tar.gz](releases/pdf-downloader-1.0.0.tar.gz) — บน GitHub กด Download raw file เพื่อดาวน์โหลด
+ไฟล์พร้อมติดตั้ง: [pdf-downloader-1.0.1.tar.gz](releases/pdf-downloader-1.0.1.tar.gz) — บน GitHub กด Download raw file เพื่อดาวน์โหลด
 
 ## ติดตั้งใน Budibase
 
-1. ใช้ไฟล์ `dist/pdf-downloader-1.0.0.tar.gz` ที่สร้างด้วย `npm run build` ห้ามเปลี่ยนเป็น ZIP
+1. ใช้ไฟล์ `dist/pdf-downloader-1.0.1.tar.gz` ที่สร้างด้วย `npm run build` ห้ามเปลี่ยนเป็น ZIP
 2. ใน Budibase เปิดส่วน Plugins ของ workspace แล้วนำเข้าไฟล์ tar.gz (บัญชีและรุ่นที่ใช้งานต้องเปิดใช้ custom plugins)
 3. เปิดแอปใน Design แล้วเพิ่ม component **PDF Downloader**
 4. ลาก components ของเอกสารเข้าไปเป็น children ของ PDF Downloader เช่น Container, Text, Image และตารางที่ render ข้อมูลครบแล้ว
@@ -76,3 +76,13 @@ npm run test:browser
 - แพ็กเกจประกอบด้วย `plugin.min.js`, `schema.json` (SHA-1 สำหรับระบบ Budibase) และ `package.json`
 
 ชุดทดสอบ browser ตรวจดาวน์โหลดจริงและอ่านไฟล์ PDF รวมถึงโหลด production IIFE ใน host จำลอง Svelte 3 การทดสอบนี้ไม่ได้แทนการนำเข้าใน Budibase server 3.4.1 จริง ควรตรวจรับกับแอปจริง โดยเฉพาะข้อมูล binding, theme, font และตารางเฉพาะของแอป
+
+## อัปเดตจาก 1.0.0 เป็น 1.0.1
+
+แก้ปุ่มไม่แสดง: Budibase 3.4.1 สร้าง component ID จาก `package.name` แต่ client ลงทะเบียนจาก `schema.schema.name` ใน 1.0.0 ชื่อสองตำแหน่งไม่ตรงกัน รุ่น 1.0.1 ใช้ `pdf-downloader` เหมือนกันและคง `friendlyName` เป็น PDF Downloader
+
+อัปโหลดไฟล์ 1.0.1 ผ่าน Plugins เพื่ออัปเดตปลั๊กอินเดิม แล้วรีเฟรชหน้า Design แบบล้าง cache (`Ctrl+Shift+R`) component เดิมที่อ้างอิง `plugin/pdf-downloader` ใช้งานต่อได้ ไม่ต้องลบ container หรือข้อมูลเอกสาร
+
+หากวางปุ่มเป็น sibling ของ Container เอกสาร ให้ระบุ CSS selector ของ container เช่น `[data-id="รหัส-component-จริง"]` จาก DOM ในหน้าจอ Preview; ชื่อในต้นไม้ เช่น `Container 30` ไม่ใช่ CSS selector หรือย้าย container มาเป็น child ของปลั๊กอินและเว้น selector ว่าง ทดสอบดาวน์โหลดใน Preview
+
+การทดสอบ regression จำลองการ resolve component ตาม ID ของ Budibase server แทนการหยิบ component ตัวแรกจาก registry ซึ่งทดสอบเดิมไม่ครอบคลุม
