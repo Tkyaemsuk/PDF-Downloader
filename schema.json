@@ -61,6 +61,26 @@
         ]
       },
       {
+        "type": "select",
+        "key": "paginationMode",
+        "label": "การจัดหน้า PDF",
+        "defaultValue": "auto",
+        "options": [
+          {
+            "label": "อัตโนมัติ — ย่อส่วนที่เกินเล็กน้อย",
+            "value": "auto"
+          },
+          {
+            "label": "พอดีหนึ่งหน้า — รวมส่วนลงชื่อ",
+            "value": "single"
+          },
+          {
+            "label": "หลายหน้า — รักษาความกว้าง",
+            "value": "multiple"
+          }
+        ]
+      },
+      {
         "type": "number",
         "key": "margin",
         "label": "ขอบกระดาษ (มม. 5–30)",

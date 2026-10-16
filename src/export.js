@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas'
 import { PDFDocument } from 'pdf-lib'
-import { geometry, number, paginate, filename } from './layout.js'
+import { geometry, number, planPages, filename } from './layout.js'
 
 async function loadImage(url) {
   const image = new Image()
@@ -96,7 +96,8 @@ export async function createPdf(target, options = {}, progress = () => {}) {
       }
     }
   }).catch(error => { cloneFrame?.remove(); throw error })
-  const pages = paginate(capture.height, Math.floor(capture.width * g.bodyHeight / g.bodyWidth), blocks, forced)
+  const layout = planPages(capture.width, capture.height, g, options.paginationMode, blocks, forced)
+  const { pages } = layout
   const pdf = await PDFDocument.create()
   pdf.setTitle(String(options.fileName || 'document'))
   pdf.setCreator('PDF Downloader — Budibase 3.4.1 / Svelte 3')
@@ -110,7 +111,7 @@ export async function createPdf(target, options = {}, progress = () => {}) {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
     const slice = pages[i]
-    ctx.drawImage(capture, 0, slice.start, capture.width, slice.height, m, m, bodyWidth, slice.height / capture.width * bodyWidth)
+    ctx.drawImage(capture, 0, slice.start, capture.width, slice.height, layout.x * pxPerMm, m, capture.width * layout.scale * pxPerMm, slice.height * layout.scale * pxPerMm)
     // Low-opacity watermark over the captured background remains visible on opaque Budibase cards.
     // It is restricted to the document body and never covers the footer.
     if (options.watermarkText || watermark) {

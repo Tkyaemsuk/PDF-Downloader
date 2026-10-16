@@ -23,3 +23,28 @@ test('download filename stays usable and preserves Thai', () => {
   assert.equal(filename('รายงาน/2569.pdf'),'รายงาน-2569.pdf')
   assert.equal(filename(''),'document.pdf')
 })
+
+test('auto-fit keeps a near-page form and its signature area together, inside body bounds', async () => {
+  const { planPages } = await import('../src/layout.js')
+  for (const orientation of ['portrait', 'landscape']) {
+    const page = geometry({ orientation })
+    const width = 800, height = Math.ceil(width * page.bodyHeight / page.bodyWidth * 1.15)
+    const result = planPages(width, height, page)
+    assert.equal(result.pages.length, 1)
+    assert.equal(result.pages[0].height, height)
+    assert.ok(height * result.scale <= page.bodyHeight + 1e-9)
+    assert.ok(result.x >= page.margin)
+    assert.ok(Math.abs(result.x * 2 + width * result.scale - page.width) < 1e-9)
+    assert.ok(planPages(width, height, page, 'multiple').pages.length > 1)
+  }
+})
+test('long reports stay multipage, explicit breaks are respected, single-page mode fits all content', async () => {
+  const { planPages } = await import('../src/layout.js')
+  const page = geometry()
+  assert.ok(planPages(800, 3000, page).pages.length > 1)
+  const fit = planPages(800, 3000, page, 'single', [], [1000])
+  assert.equal(fit.pages.length, 1)
+  assert.equal(fit.pages[0].height, 3000)
+  assert.ok(fit.scale * 3000 <= page.bodyHeight + 1e-9)
+  assert.equal(planPages(800, 500, page, 'auto', [], [250]).pages.length, 2)
+})

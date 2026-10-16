@@ -89,3 +89,49 @@ test('single page, image watermark, explicit breaks and oversize error cleanup',
   expect(result.error).toContain('ขนาดใหญ่')
   expect(result.frames).toBe(0)
 })
+
+test('near-page signature area fits on one page and footer stays outside content', async ({ page }) => {
+  await page.goto('/')
+  const result = await page.evaluate(async () => {
+    const target = document.createElement('div')
+    target.style.cssText = 'width:800px;height:1250px;position:relative;background:white'
+    target.innerHTML = '<h2>รายงานผล</h2><div style="position:absolute;bottom:0;width:100%;height:90px;background:rgb(255,0,255)">Submit by / Supervisor / Date</div>'
+    document.body.append(target)
+    const original = HTMLCanvasElement.prototype.toDataURL
+    let bounds
+    HTMLCanvasElement.prototype.toDataURL = function (...args) {
+      if (args[0] === 'image/png' && this.height > 1000) {
+        const ctx = this.getContext('2d'), pixels = ctx.getImageData(0, 0, this.width, this.height).data
+        let lastSignatureY = -1, firstSignatureY = -1, signatureX = -1
+        for (let y=0;y<this.height;y++) for (let x=0;x<this.width;x++) {
+          const i=(y*this.width+x)*4
+          if (pixels[i]>240 && pixels[i+1]<20 && pixels[i+2]>240) {
+            if(firstSignatureY<0) {firstSignatureY=y;signatureX=x}
+            lastSignatureY=y
+          }
+        }
+        bounds={ firstSignatureY,lastSignatureY,signatureX,width:this.width,height:this.height }
+      }
+      return original.apply(this,args)
+    }
+    try {
+      const auto = await window.createPdf(target, { quality: 1 })
+      const autoBounds = bounds
+      const multiple = await window.createPdf(target, { quality: 1, paginationMode: 'multiple' })
+      return { count:auto.pageCount, multiple:multiple.pageCount, bounds:autoBounds }
+    } finally { HTMLCanvasElement.prototype.toDataURL=original;target.remove() }
+  })
+  expect(result.count).toBe(1)
+  expect(result.multiple).toBe(2)
+  expect(result.bounds.firstSignatureY).toBeGreaterThan(0)
+  // Bottom of the form must remain above the 16mm footer band and 12mm margin.
+  expect(result.bounds.lastSignatureY).toBeLessThan(result.bounds.height * 270 / 297)
+  expect(result.bounds.lastSignatureY-result.bounds.firstSignatureY).toBeGreaterThan(60)
+  expect(result.bounds.signatureX).toBeGreaterThan(result.bounds.width * 12 / 210)
+
+  await page.evaluate(() => window.setOptions({ paginationMode:'single', fileName:'single-page' }))
+  const download=page.waitForEvent('download')
+  await page.getByRole('button',{name:'PDF Download',exact:true}).click()
+  const pdf=await PDFDocument.load(await readFile(await (await download).path()))
+  expect(pdf.getPageCount()).toBe(1)
+})

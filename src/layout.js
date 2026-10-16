@@ -38,6 +38,18 @@ export function paginate(height, capacity, blocks = [], forced = []) {
   }
   return pages
 }
+// Auto-fit small overflow (at most 20% shrink); long reports retain pagination.
+// Fit both dimensions, reserving footer space before calculating scale.
+export function planPages(width, height, page, mode = 'auto', blocks = [], forced = []) {
+  if (!(width > 0 && height > 0)) throw new Error('Invalid document dimensions')
+  const widthScale = page.bodyWidth / width
+  const fitScale = Math.min(widthScale, page.bodyHeight / height)
+  const hasBreaks = forced.some(y => y > 0 && y < height)
+  const single = mode === 'single' || (mode !== 'multiple' && !hasBreaks && fitScale / widthScale >= 0.8)
+  const scale = single ? fitScale : widthScale
+  const pages = single ? [{ start: 0, height }] : paginate(height, Math.floor(page.bodyHeight / scale), blocks, forced)
+  return { pages, scale, x: (page.width - width * scale) / 2 }
+}
 export function filename(value) {
   return (String(value || 'document').replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|\x00-\x1f]/g, '-').slice(0, 120) || 'document') + '.pdf'
 }
